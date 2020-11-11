@@ -13,11 +13,11 @@ from datetime import datetime as dt
 
 # Parsing values ------------------ Start
 parser = argparse.ArgumentParser(description='Automatically capture handshake')
-parser.add_argument('ssid', metavar='n', help='Wifi name')
-parser.add_argument('-i', default = "", help='Interface')
-parser.add_argument('-c', default = 0.6, help='Confidence in guessing network name if its incorrect (default = 0.6)')
-parser.add_argument('--pAm', type=int, default=5, help='Amount of packets to send (default = 5)')
-parser.add_argument('--dir', default = "", help='Directory (default = mydir/wifis/yourwifiname)')
+parser.add_argument('ssid', metavar='network_name', help='Network name')
+parser.add_argument('-i', metavar='interface', default = "", help='Interface')
+parser.add_argument('-c', metavar='confidence', default = 0.6, help='Confidence in guessing network name if its incorrect (default = 0.6)')
+parser.add_argument('--pAm', metavar='packets', type=int, default=5, help='Amount of packets to send (default = 5)')
+parser.add_argument('--dir', metavar='directory', default = "", help='Directory (default = mydir/wifis/network_name)')
 
 args = parser.parse_args()
 # Parsed values ------------------- End
