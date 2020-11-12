@@ -1,15 +1,15 @@
-import sys                          # welp, python
-import argparse                     # to parse flags
-import os                           # check for directories, open processes
-import subprocess                   # open processes
-import re                           # parse output
-import csv                          # parse output
-import time                         # sleep
-import netifaces                    # fetch interfaces
-from difflib import get_close_matches #
-from difflib import SequenceMatcher
-from termcolor import colored       # Some colors for ya
-from datetime import datetime as dt
+import sys                              # welp, python
+import argparse                         # to parse flags
+import os                               # check for directories, open processes
+import subprocess                       # open processes
+import re                               # parse output
+import csv                              # parse output
+import time                             # sleep
+import netifaces                        # fetch interfaces
+from difflib import get_close_matches   # for network guesses
+from difflib import SequenceMatcher     # for network guesses
+from termcolor import colored           # some colors for ya
+from datetime import datetime as dt     # otput time
 
 # Parsing values ------------------ Start
 parser = argparse.ArgumentParser(description='Automatically capture handshake')
@@ -114,18 +114,13 @@ def monitor_mode():
         return False
 
 def start_network_manager():
-    command_networkmanager_start = 'dbus-run-session sudo systemctl start NetworkManager'
-    os.popen(command_networkmanager_start).read()
+    command_network_manager_start = 'dbus-run-session sudo systemctl start NetworkManager'
+    os.popen(command_network_manager_start).read()
     return True
 
-def stop_network_manager():
-    command_networkmanager_stop = "dbus-run-session sudo systemctl stop NetworkManager"
-    os.popen(command_networkmanager_stop).read()
-    return True
-    
 def start_airmon():
-    command_airmon_check_kill = "sudo airmon-ng check kill"
-    output_airmon_check_kill = os.popen(command_airmon_check_kill).read()
+    #command_airmon_check_kill = "sudo airmon-ng check kill"
+    #output_airmon_check_kill = os.popen(command_airmon_check_kill).read()
     command_airmon_start = "sudo airmon-ng start {}".format(Interface)
     output_airmon_start = os.popen(command_airmon_start).read()
     update_interfaces(True)
@@ -283,7 +278,7 @@ if __name__ == "__main__":
     if monitor_mode():
         stop_airmon()
     time.sleep(1)
-    start_network_manager()
+    #start_network_manager()
     time.sleep(1)
     get_network_info()
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"[SSID: {SSID}] [BSSID: {BSSID}] [Channel: {Channel}] [Signal strength: {SignalStrength}]")
@@ -312,5 +307,5 @@ if __name__ == "__main__":
             cyclesCount = 1
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue', attrs=['bold']) +'] ' + '[' + colored('INFO', 'green') + '] ' + "Success!")
     stop_airmon()            
-    start_network_manager()
+    #start_network_manager()
 # PROGRAM ---------------------------------- END
