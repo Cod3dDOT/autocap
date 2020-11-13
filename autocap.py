@@ -1,5 +1,5 @@
-import sys                              # welp, python
-import argparse                         # to parse flags
+import sys                              # python xD
+import argparse                         # parse flags
 import os                               # check for directories, open processes
 import subprocess                       # open processes
 import re                               # parse output
@@ -9,7 +9,7 @@ import netifaces                        # fetch interfaces
 from difflib import get_close_matches   # for network guesses
 from difflib import SequenceMatcher     # for network guesses
 from termcolor import colored           # some colors for ya
-from datetime import datetime as dt     # otput time
+from datetime import datetime as dt     # output time
 
 # Parsing values ------------------ Start
 parser = argparse.ArgumentParser(description='Automatically capture handshake')
@@ -18,6 +18,7 @@ parser.add_argument('-i', metavar='interface', default = "", help='Interface')
 parser.add_argument('-c', metavar='confidence', default = 0.6, help='Confidence in guessing network name if its incorrect (default = 0.6)')
 parser.add_argument('--pAm', metavar='packets', type=int, default=5, help='Amount of packets to send (default = 5)')
 parser.add_argument('--dir', metavar='directory', default = "", help='Directory (default = mydir/wifis/network_name)')
+parser.add_argument('-m', metavar='mode', default = "", help="Set to pi if you are using raspberry")
 
 args = parser.parse_args()
 # Parsed values ------------------- End
@@ -45,6 +46,10 @@ MY_DIRECTORY = os.popen("pwd").read()
 SaveTo = "{}/wifis/".format(MY_DIRECTORY[:-1])
 if args.dir != "":
     SaveTo = args.dir
+    
+isPi = False
+if args.mode == 'pi':
+    isPi = True
 # Global variables ------------------------- End
 
 # Custom functions ------------------------- Start
@@ -119,8 +124,9 @@ def start_network_manager():
     return True
 
 def start_airmon():
-    #command_airmon_check_kill = "sudo airmon-ng check kill"
-    #output_airmon_check_kill = os.popen(command_airmon_check_kill).read()
+    if isPi == False:
+        command_airmon_check_kill = "sudo airmon-ng check kill"
+        output_airmon_check_kill = os.popen(command_airmon_check_kill).read()
     command_airmon_start = "sudo airmon-ng start {}".format(Interface)
     output_airmon_start = os.popen(command_airmon_start).read()
     update_interfaces(True)
@@ -131,6 +137,51 @@ def stop_airmon():
     os.popen(command_airmon_stop).read()
     update_interfaces(False)
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Changed interface: {Interface}")
+
+def get_network_info_pi():
+    global SSID
+    global BSSID
+    global Channel
+    global SignalStrength
+    command_scan_wifi = '''sudo iwlist wlan0 scan | egrep "ESSID:|Address:|Channel:" | cut -d : -f 2,3,4,5,6,7,8 | tr -d '"' | sed 's/ //g' '''
+    output_scan_wifi = os.popen(command_scan_wifi).read()
+    splited_output_scan_wifi = output_scan_wifi.split("\n")
+    if splited_output_scan_wifi == []:
+        time.sleep(5)
+        output_scan_wifi = os.popen(command_scan_wifi).read()
+        splited_output_scan_wifi = output_scan_wifi.split("\n")
+    
+    del splited_output_scan_wifi[len(splited_output_scan_wifi)-1]    
+    
+    if splited_output_scan_wifi == []:
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "No networks found")
+        sys.exit()
+    
+    wifiNames = []
+    
+    index = 1
+    for record in splited_output_scan_wifi:
+        if record == SSID:
+            BSSID = splited_output_scan_wifi[splited_output_scan_wifi.index(SSID)-2]
+            Channel = int(splited_output_scan_wifi[splited_output_scan_wifi.index(SSID)-1])
+            return True
+        
+        elif index == 3:
+            wifiNames.append(record)
+            index = 0
+        index += 1
+        
+    try:
+        closeMatch = get_close_matches(SSID, wifiNames, 1, Confidence)[0]
+        BSSID = splited_output_scan_wifi[splited_output_scan_wifi.index(closeMatch)-2]
+        Channel = int(splited_output_scan_wifi[splited_output_scan_wifi.index(closeMatch)-1])
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('WARNING', 'yellow') + '] ' + f"No such network '{SSID}', assuming you typed '{closeMatch}'") 
+        SSID = closeMatch
+        return True
+    except:
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "Error scanning for network (network name is incorrect) olala")
+        sys.exit()
+        return False
 
 def get_network_info():
     global SSID
@@ -215,8 +266,6 @@ def select_station():
     if UsedStations != Stations or len(UsedStations) != len(Stations):
         for CurrentStation in UsedStations:
             CurrentStation = Stations[Stations.index(CurrentStation)+1]
-            print(len(Stations))
-            print(Stations.index(CurrentStation)+1)
     else:
         UsedStations.clear()
         CurrentStation = Stations[0]
@@ -277,10 +326,12 @@ if __name__ == "__main__":
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Interface: {Interface}")
     if monitor_mode():
         stop_airmon()
-    time.sleep(1)
-    #start_network_manager()
-    time.sleep(1)
-    get_network_info()
+    if isPi == False
+        start_network_manager()
+    if isPi
+        get_network_info_pi()
+    else:
+        get_network_info()
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"[SSID: {SSID}] [BSSID: {BSSID}] [Channel: {Channel}] [Signal strength: {SignalStrength}]")
     make_directory()
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Directory: {SaveTo}")
@@ -307,5 +358,6 @@ if __name__ == "__main__":
             cyclesCount = 1
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue', attrs=['bold']) +'] ' + '[' + colored('INFO', 'green') + '] ' + "Success!")
     stop_airmon()            
-    #start_network_manager()
+    if isPi == False
+        start_network_manager()
 # PROGRAM ---------------------------------- END
