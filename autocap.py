@@ -48,7 +48,7 @@ if args.dir != "":
     SaveTo = args.dir
     
 isPi = False
-if args.mode == 'pi':
+if args.m == 'pi':
     isPi = True
 # Global variables ------------------------- End
 
@@ -61,7 +61,7 @@ def select_interfaces():
     Interfaces.clear()
     interfaces = netifaces.interfaces()
     if len(interfaces) < 3:
-        print("No interfaces")
+        rint('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "No interfaces")
         sys.exit()
     index = 0
     for interface in interfaces:
@@ -326,12 +326,11 @@ if __name__ == "__main__":
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Interface: {Interface}")
     if monitor_mode():
         stop_airmon()
-    if isPi == False
+    if isPi == False:
         start_network_manager()
-    if isPi
-        get_network_info_pi()
-    else:
         get_network_info()
+    else:
+        get_network_info_pi()
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"[SSID: {SSID}] [BSSID: {BSSID}] [Channel: {Channel}] [Signal strength: {SignalStrength}]")
     make_directory()
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Directory: {SaveTo}")
@@ -358,6 +357,6 @@ if __name__ == "__main__":
             cyclesCount = 1
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue', attrs=['bold']) +'] ' + '[' + colored('INFO', 'green') + '] ' + "Success!")
     stop_airmon()            
-    if isPi == False
+    if isPi == False:
         start_network_manager()
 # PROGRAM ---------------------------------- END
