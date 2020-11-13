@@ -73,7 +73,7 @@ def select_interfaces():
     if Interface in Interfaces and args.i != "":
         return True
     if Interface not in Interfaces and args.i != "":
-        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"No such interface {Interface}")
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + "No such interface")
         sys.exit()
     
     if len(Interfaces) > 1:
@@ -179,7 +179,7 @@ def get_network_info_pi():
         SSID = closeMatch
         return True
     except:
-        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "Error scanning for network (network name is incorrect)")
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "Error scanning for network (network name is incorrect) olala")
         sys.exit()
         return False
 
@@ -334,31 +334,41 @@ if __name__ == "__main__":
         get_network_info_pi()
         print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"[SSID: {SSID}] [BSSID: {BSSID}] [Channel: {Channel}]")
     make_directory()
+    out_file = open(SaveTo + '/output.txt','w')
+    out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [INFO] Directory: {SaveTo}\n')
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Directory: {SaveTo}")
     start_airmon()
     start_airodump()
+    out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [INFO] Waiting for station...\n')
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Waiting for station...")
     if isPi:
         time.sleep(1)
     check_for_stations()
+    out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [INFO] Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}\n')
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}")
     deauth()
     cyclesCount = 1
     while check_handshake() == False:
+        out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [WARNING] Failure\n')
         print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('WARNING', 'yellow') + '] ' + "Failure")
         if len(Stations) > 1 and cyclesCount < len(Stations)*(CyclesAmount+1):
+            out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [INFO] Selecting another station\n')
             print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + "Selecting another station")
             select_station()
+            out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [INFO] Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}\n')
             print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}")
             deauth()
             cyclesCount += 1
         else:
+            out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [INFO] Rescanning stations...\n')
             print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + "Rescanning stations...")
             check_for_stations()
+            out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [INFO] Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}\n')
             print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}")
             deauth()
             cyclesCount = 1
-    print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue', attrs=['bold']) +'] ' + '[' + colored('INFO', 'green') + '] ' + "Success!")
+    out_file.write(f'[{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}] [INFO] Success!\n')
+    print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue', attrs=['bold']) +'] ' + '[' + colored('INFO', 'green', attrs=['bold']) + '] ' + colored("Success!", attrs=['bold']))
     stop_airmon()            
     if isPi == False:
         start_network_manager()
