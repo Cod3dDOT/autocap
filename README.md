@@ -14,7 +14,7 @@
  ```
  Raspberries (Raspberry OS):
  ```
- python3 autocap.py network_name -i interface -m pi
+ python3 autocap.py network_name -i interface --mode pi
  ```
  For optional flags type:
  ```

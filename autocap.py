@@ -73,7 +73,7 @@ def select_interfaces():
     if Interface in Interfaces and args.i != "":
         return True
     if Interface not in Interfaces and args.i != "":
-        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + "No such interface")
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"No such interface {Interface}")
         sys.exit()
     
     if len(Interfaces) > 1:
@@ -179,7 +179,7 @@ def get_network_info_pi():
         SSID = closeMatch
         return True
     except:
-        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "Error scanning for network (network name is incorrect) olala")
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "Error scanning for network (network name is incorrect)")
         sys.exit()
         return False
 
