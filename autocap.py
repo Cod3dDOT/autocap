@@ -298,9 +298,14 @@ def make_directory():
     return True
 
 def check_handshake():
-    command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'".format(SaveTo)
-    command_aircrack_output = os.popen(command_aircrack).read().split(" ")[5]
-    if int(command_aircrack_output) > 0:
+    command_aircrack_output = type(int)
+    try:
+        command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'".format(SaveTo)
+        command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
+    except:
+        command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '6p' | tr -s ' ' | tr -d '()\n'".format(SaveTo)
+        command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
+    if command_aircrack_output > 0:
         return True
     else:
         return False
