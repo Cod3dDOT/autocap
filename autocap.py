@@ -61,7 +61,7 @@ def select_interfaces():
     Interfaces.clear()
     interfaces = netifaces.interfaces()
     if len(interfaces) < 3:
-        rint('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "No interfaces")
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('ERROR', 'red') + '] ' + "No interfaces")
         sys.exit()
     index = 0
     for interface in interfaces:
@@ -329,14 +329,17 @@ if __name__ == "__main__":
     if isPi == False:
         start_network_manager()
         get_network_info()
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"[SSID: {SSID}] [BSSID: {BSSID}] [Channel: {Channel}] [Signal strength: {SignalStrength}]")
     else:
         get_network_info_pi()
-    print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"[SSID: {SSID}] [BSSID: {BSSID}] [Channel: {Channel}] [Signal strength: {SignalStrength}]")
+        print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"[SSID: {SSID}] [BSSID: {BSSID}] [Channel: {Channel}]")
     make_directory()
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Directory: {SaveTo}")
     start_airmon()
     start_airodump()
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Waiting for station...")
+    if isPi:
+        time.sleep(1)
     check_for_stations()
     print('['+ colored(f'{"{:02d}".format(dt.now().year)}:{"{:02d}".format(dt.now().month)}:{"{:02d}".format(dt.now().second)}', 'blue') +'] ' + '[' + colored('INFO', 'green') + '] ' + f"Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}")
     deauth()
