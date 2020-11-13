@@ -15,10 +15,10 @@ from datetime import datetime as dt     # output time
 parser = argparse.ArgumentParser(description='Automatically capture handshake')
 parser.add_argument('ssid', metavar='network_name', help='Network name')
 parser.add_argument('-i', metavar='interface', default = "", help='Interface')
-parser.add_argument('-c', metavar='confidence', default = 0.6, help='Confidence in guessing network name if its incorrect (default = 0.6)')
+parser.add_argument('--conf', metavar='confidence', default = 0.6, help='Confidence in guessing network name if its incorrect (default = 0.6)')
 parser.add_argument('--pAm', metavar='packets', type=int, default=5, help='Amount of packets to send (default = 5)')
 parser.add_argument('--dir', metavar='directory', default = "", help='Directory (default = mydir/wifis/network_name)')
-parser.add_argument('-m', metavar='mode', default = "", help="Set to pi if you are using raspberry")
+parser.add_argument('--mode', metavar='mode', default = "", help="Set to pi if you are using raspberry")
 
 args = parser.parse_args()
 # Parsed values ------------------- End
@@ -32,8 +32,8 @@ BSSID = type(str)
 Channel = type(int)
 SignalStrength = type(int)
 
-Confidence = 0.6 #How confident script must be in guessing network name
-
+Confidence = args.conf #How confident script must be in guessing network name
+    
 CurrentStation = ""
 UsedStations = []
 Stations = []
@@ -48,7 +48,7 @@ if args.dir != "":
     SaveTo = args.dir
     
 isPi = False
-if args.m == 'pi':
+if args.mode == 'pi':
     isPi = True
 # Global variables ------------------------- End
 
