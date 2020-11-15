@@ -16,7 +16,7 @@
  ```
  python3 autocap.py network_name -i interface --mode pi
  ```
- For optional flags type:
+ For all options:
  ```
  python3 autocap.py -h
  ```
