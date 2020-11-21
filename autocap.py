@@ -240,10 +240,6 @@ def make_directory():
 
 def check_handshake():
     command_aircrack_output = type(int)
-    corrupted_check = f"sudo aircrack-ng {SaveTo}-01.cap | sed -n '7p' | tr -s ' ' | tr -d ()\n'"
-    command_corrupted_check = os.popen(command_aircrack).read().split("-")[0]
-    if command_corrupted_check == "- corrupted file?":
-        return False
     try:
         command_aircrack = f"sudo aircrack-ng {SaveTo}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'"
         command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
