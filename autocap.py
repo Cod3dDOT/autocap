@@ -142,7 +142,7 @@ def get_network_info():
     global BSSID
     global Channel
     global SignalStrength
-    command_scan_wifi = '''sudo iwlist wlan0 scan | egrep "ESSID:|Address:|Channel:" | cut -d : -f 2,3,4,5,6,7,8 | tr -d '"' | sed 's/ //g' '''
+    command_scan_wifi = f'''sudo iwlist {Interface} scan | egrep "ESSID:|Address:|Channel:" | cut -d : -f 2,3,4,5,6,7,8 | tr -d '"' | sed 's/ //g' '''
     output_scan_wifi = os.popen(command_scan_wifi).read()
     splited_output_scan_wifi = output_scan_wifi.split("\n")
     if not splited_output_scan_wifi:
@@ -240,6 +240,10 @@ def make_directory():
 
 def check_handshake():
     command_aircrack_output = type(int)
+    corrupted_check = f"sudo aircrack-ng {SaveTo}-01.cap | sed -n '7p' | tr -s ' ' | tr -d ()\n'"
+    command_corrupted_check = os.popen(command_aircrack).read().split("-")[0]
+    if command_corrupted_check == "- corrupted file?":
+        return False
     try:
         command_aircrack = f"sudo aircrack-ng {SaveTo}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'"
         command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])

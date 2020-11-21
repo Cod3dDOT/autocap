@@ -5,7 +5,7 @@
  ```
  git clone https://github.com/Cod3dDOT/autocap
  cd autocap
- pip3 install -r requirements
+ pip3 install -r requirements.txt
  ```
 ## Usage
  Default (Linux):
