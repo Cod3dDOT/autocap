@@ -25,10 +25,6 @@
  ```
  sudo apt-get install aircrack-ng
  ```
- netifaces:
- ```
- pip3 install netifaces
- ```
  termcolor:
  ```
  pip3 install termcolor

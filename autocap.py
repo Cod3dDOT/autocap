@@ -5,7 +5,6 @@ import sys                              # python xD
 import time                             # sleep
 from datetime import datetime as dt     # output time
 from difflib import get_close_matches   # for network guesses
-import netifaces                        # fetch interfaces
 from termcolor import colored           # some colors for ya
 
 # Parsing values ------------------ Start
@@ -60,7 +59,8 @@ def select_interfaces():
     InterfaceIndex = type(int)
 
     Interfaces.clear()
-    interfaces = netifaces.interfaces()
+    command_set_interface_up = "sudo iwconfig 2>&1 | grep -oP '^\w+'"
+	interfaces = os.popen(command_set_interface_up).read().split("\n")[:-1]
     if len(interfaces) < 3:
         print('[' + colored(f'{"{:02d}".format(dt.now().day)}:{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored("ERROR", 'red') + '] No interfaces')
         sys.exit()
@@ -240,16 +240,25 @@ def make_directory():
 
 def check_handshake():
     command_aircrack_output = type(int)
-    try:
-        command_aircrack = f"sudo aircrack-ng {SaveTo}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'"
-        command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
-    except IndexError:
-        command_aircrack = f"sudo aircrack-ng {SaveTo}-01.cap | sed -n '6p' | tr -s ' ' | tr -d '()\n'"
-        command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
-    if command_aircrack_output > 0:
-        return True
-    else:
-        return False
+	command_aircrack_output = ''
+	try:
+		command_aircrack = f"sudo aircrack-ng /home/cod3d/Desktop/-01.cap 2>&1 | sed -n '3p' | tr -s ' '"
+		command_aircrack_output = os.popen(command_aircrack).read()
+	except IndexError:
+		command_aircrack = f"sudo aircrack-ng /home/cod3d/Desktop/-01.cap 2>&1 | sed -n '4p' | tr -s ' '"
+		command_aircrack_output = os.popen(command_aircrack).read()
+	if command_aircrack_output == "Invalid packet capture length 0 - corrupted file?\n":
+		return False
+	try:
+		command_aircrack = f"sudo aircrack-ng /home/cod3d/Desktop/-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'"
+		command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
+	except IndexError:
+		command_aircrack = f"sudo aircrack-ng /home/cod3d/Desktop/-01.cap | sed -n '6p' | tr -s ' ' | tr -d '()\n'"
+		command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
+	if command_aircrack_output > 0:
+		return True
+	else:
+		return False
 
 
 def check_for_stations():
