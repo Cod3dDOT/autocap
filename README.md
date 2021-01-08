@@ -16,11 +16,9 @@
  ```
  python3 autocap.py network_name -i interface --mode pi
  ```
- All options (```python3 autocap.py -h```):
+ All options ```python3 autocap.py -h```:
  ```
- usage: autocap.py [-h] [-i interface] [--conf confidence] [--pAm packets] [--dir directory]
-                  [--mode mode]
-                  network_name
+ usage: autocap.py [-h] [-i interface] [--conf confidence] [--pAm packets] [--dir directory] [--mode mode] network_name
 
  Automatically capture handshake
 
@@ -34,7 +32,6 @@
 	--pAm packets      Amount of packets to send (default = 5)
 	--dir directory    Directory (default = mydir/wifis/network_name)
 	--mode mode        Set to pi if you are using raspberry
-
  ```
 ## Dependecies
  aircrack-ng:
