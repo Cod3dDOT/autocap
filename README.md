@@ -1,7 +1,7 @@
 # autocap
  Automated packet capture and client deauth for later cracking.
  This project was initially created for raspberry pi with external wifi adapater.
- [[demo/autocap_demo.svg]]
+ ![autocap demo](/demo/autocap_demo.svg)
 ## Installation
  ```
  git clone https://github.com/Cod3dDOT/autocap
