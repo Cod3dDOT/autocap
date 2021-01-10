@@ -224,18 +224,18 @@ def check_handshake(directory):
 	command_aircrack_output = type(int)
 	command_aircrack_output = ''
 	try:
-		command_aircrack = f"sudo aircrack-ng /home/cod3d/Desktop/-01.cap 2>&1 | sed -n '3p' | tr -s ' '"
+		command_aircrack = f"sudo aircrack-ng {directory}-01.cap 2>&1 | sed -n '3p' | tr -s ' '"
 		command_aircrack_output = os.popen(command_aircrack).read()
 	except IndexError:
-		command_aircrack = f"sudo aircrack-ng /home/cod3d/Desktop/-01.cap 2>&1 | sed -n '4p' | tr -s ' '"
+		command_aircrack = f"sudo aircrack-ng {directory}-01.cap 2>&1 | sed -n '4p' | tr -s ' '"
 		command_aircrack_output = os.popen(command_aircrack).read()
 	if command_aircrack_output == "Invalid packet capture length 0 - corrupted file?\n":
 		return False, "Corrupted file"
 	try:
-		command_aircrack = f"sudo aircrack-ng /home/cod3d/Desktop/-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'"
+		command_aircrack = f"sudo aircrack-ng {directory}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'"
 		command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
 	except IndexError:
-		command_aircrack = f"sudo aircrack-ng /home/cod3d/Desktop/-01.cap | sed -n '6p' | tr -s ' ' | tr -d '()\n'"
+		command_aircrack = f"sudo aircrack-ng {directory}-01.cap | sed -n '6p' | tr -s ' ' | tr -d '()\n'"
 		command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
 	if command_aircrack_output > 0:
 		return True, "Success"
@@ -264,10 +264,9 @@ def recieveHandshake(interface_name, network_name, guessing_confidence, deauth_p
 	if monitor_mode(interface_name):
 		interface_name = stop_airmon(interface_name)
 		if supports_network_manager:
-			time.sleep(3)
 			start_network_manager()
 			while check_network_manager == False:
-				time.sleep(1)
+				time.sleep(5)
 	NetworkName, BSSID, Channel = get_network_info(interface_name, network_name, guessing_confidence)
 	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] [SSID: {NetworkName}] [BSSID: {BSSID}] [Channel: {Channel}]', flush=True)
 	Directory = make_directory(directory, NetworkName)
