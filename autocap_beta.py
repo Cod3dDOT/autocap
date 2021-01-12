@@ -1,7 +1,6 @@
 import argparse                         # parse flags
 import os                               # check for directories, open processes
 import subprocess                       # open processes
-import sys                              # python xD
 import time                             # sleep
 from datetime import datetime as dt     # output time
 from difflib import get_close_matches   # for network guesses
@@ -46,7 +45,7 @@ def select_interface(interface_name):
 	interfaces = os.popen(command_find_interfaces).read().split("\n")[:-1]
 	if len(interfaces) < 3:
 		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] No interfaces')
-		sys.exit()
+		exit()
 	index = 0
 	for interface in interfaces:
 		if interface != "lo" and interface != "eth0":
@@ -60,7 +59,7 @@ def select_interface(interface_name):
 		return interface_name
 	if interface_name not in Interfaces and args.i != "":
 		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + f'] No such interface {interface_name}')
-		sys.exit()
+		exit()
 
 	if len(Interfaces) > 1:
 		while interface_name == "":
@@ -125,8 +124,8 @@ def get_network_info(interface_name, network_name, guessing_confidence):
 	Channel = ''
 	output_scan_wifi = os.popen(f'''sudo iwlist {interface_name} scan | egrep "ESSID:|Address:|Channel:" | cut -d : -f 2,3,4,5,6,7,8 | tr -d '"' | sed 's/ //g' 2>&1''').read()
 	#if(output_scan_wifi == "wlan0     Failed to read scan data : Resource temporarily unavailable\n" or output_scan_wifi == "wlan0     Interface doesn't support scanning : Device or resource busy"):
-	#	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] wlan0     Failed to read scan data : Resource temporarily unavailable. Disconnecting any network might help.', )
-	#	sys.exit()
+	#	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] wlan0     Failed to read scan data : Resource temporarily unavailable. Disconnecting any network might help.')
+	#	exit()
 		
 	splited_output_scan_wifi = output_scan_wifi.split("\n")
 	if not splited_output_scan_wifi:
@@ -138,7 +137,7 @@ def get_network_info(interface_name, network_name, guessing_confidence):
 
 	if not splited_output_scan_wifi:
 		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] No networks found')
-		sys.exit()
+		exit()
 
 	wifiNames = []
 
@@ -162,7 +161,7 @@ def get_network_info(interface_name, network_name, guessing_confidence):
 		return [closeMatch, BSSID, Channel]
 	except IndexError:
 		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] Error scanning for network (network name is incorrect)')
-		sys.exit()
+		exit()
 
 
 def start_airodump(interface_name, BSSID, channel, directory):

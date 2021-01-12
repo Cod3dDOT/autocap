@@ -1,7 +1,6 @@
 import argparse                         # parse flags
 import os                               # check for directories, open processes
 import subprocess                       # open processes
-import sys                              # python xD
 import time                             # sleep
 from datetime import datetime as dt     # output time
 from difflib import get_close_matches   # for network guesses
@@ -41,8 +40,8 @@ CyclesAmount = 1	# If all stations found fail to deauth,
 					# script will repeat deauth for all stations times CyclesAmount
 					# (1 == Repeat 1 times, 0 = dont repeat, rescan)
 
-MY_DIRECTORY = os.popen('pwd').read()
-SaveTo = '{}/wifis/'.format(MY_DIRECTORY[:-1])
+MY_DIRECTORY = os.popen("pwd").read()
+SaveTo = f"{MY_DIRECTORY[:-1]}/wifis/"
 if args.dir != '':
 	SaveTo = args.dir
 
@@ -63,19 +62,18 @@ def select_interfaces():
 	interfaces = os.popen(command_set_interface_up).read().split("\n")[:-1]
 	if len(interfaces) < 3:
 		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored("ERROR", 'red') + '] No interfaces')
-		sys.exit()
+		exit()
 	index = 0
 	for interface in interfaces:
 		if interface != "lo" and interface != "eth0":
-			command_set_interface_up = "sudo ifconfig {} up > /dev/null 2>&1".format(interface)
-			os.popen(command_set_interface_up).read()
+			os.popen(f"sudo ifconfig {interface} up").read()
 			Interfaces.append(interface)
 			index += 1
 	if Interface in Interfaces and args.i != "":
 		return True
 	if Interface not in Interfaces and args.i != "":
 		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f"] No such interface {Interface}")
-		sys.exit()
+		exit()
 
 	if len(Interfaces) > 1:
 		while Interface == "":
@@ -98,12 +96,12 @@ def select_interfaces():
 	return False
 
 
-def update_interfaces(monitor):
-	global Interface
-	if monitor:
-		Interface += "mon"
-	else:
-		Interface = Interface[:-3]
+def get_name_by_phy(interface_phy_id):
+	return os.popen(f"sudo airmon-ng | egrep {interface_phy_id} |" + " awk '{print $2}'").read()[:-1]
+
+
+def get_phy_by_name(interface_name):
+	return os.popen(f"sudo airmon-ng | egrep {interface_name} |" + " awk '{print $1}'").read()[:-1]
 
 
 def monitor_mode():
@@ -122,18 +120,20 @@ def start_network_manager():
 
 
 def start_airmon():
+	global Interface
 	if not isPi:
 		output_airmon_check_kill = os.popen("sudo airmon-ng check kill").read()
-	command_airmon_start = f"sudo airmon-ng start {Interface}"
-	output_airmon_start = os.popen(command_airmon_start).read()
-	update_interfaces(True)
+	interface_phy = get_phy_by_name(Interface)
+	output_airmon_start = os.popen(f"sudo airmon-ng start {Interface}").read()
+	Interface = get_name_by_phy(interface_phy)
 	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Changed interface: {Interface}')
 
 
 def stop_airmon():
-	command_airmon_stop = "sudo airmon-ng stop '{}'".format(Interface)
-	os.popen(command_airmon_stop).read()
-	update_interfaces(False)
+	global Interface
+	interface_phy = get_phy_by_name(Interface)
+	os.popen(f"sudo airmon-ng stop {Interface}").read()
+	Interface = get_name_by_phy(interface_phy)
 	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Changed interface: {Interface}')
 
 
@@ -154,7 +154,7 @@ def get_network_info():
 
 	if not splited_output_scan_wifi:
 		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] No networks found')
-		sys.exit()
+		exit()
 
 	wifiNames = []
 
@@ -178,7 +178,7 @@ def get_network_info():
 		SSID = closeMatch
 	except IndexError:
 		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] Error scanning for network (network name is incorrect)')
-		sys.exit()
+		exit()
 
 
 def start_airodump():
@@ -189,7 +189,7 @@ def start_airodump():
 def fill_stations():
 	global Stations
 	Stations.clear()
-	with open('{}-01.csv'.format(SaveTo), 'r') as csvfile:
+	with open(f'{SaveTo}-01.csv', 'r') as csvfile:
 		for idx, val in enumerate(csvfile):
 			if idx + 1 > 5:
 				if val.split(',')[0] != "\n":
