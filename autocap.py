@@ -8,12 +8,12 @@ from termcolor import colored           # some colors for ya
 
 # Parsing values ------------------ Start
 parser = argparse.ArgumentParser(description='Automatically capture handshake')
-parser.add_argument('ssid', metavar='network_name', help='Network name')
-parser.add_argument('-i', metavar='interface', default='', help='Interface')
-parser.add_argument('--conf', metavar='confidence', default=0.6, help='Confidence in guessing network name from 0 to 1 (default = 0.6)')
-parser.add_argument('--pAm', metavar='packets', type=int, default=10, help='Amount of packets to send (default = 10)')
-parser.add_argument('--dir', metavar='directory', default='', help='Directory (default = mydir/wifis/network_name)')
-parser.add_argument('--mode', metavar='mode', default='', help='Set to pi if you are using raspberry')
+parser.add_argument('ssid', metavar='NETWORK_NAME', help='Network name')
+parser.add_argument('-i', metavar='INTERFACE', default='', help='Interface')
+parser.add_argument('--conf', metavar='CONFIDENCE', type=float, default=0.6, help='Confidence in guessing network name from 0 to 1 (default = 0.6)')
+parser.add_argument('--pack', metavar='PACKETS', type=int, default=10, help='Amount of packets to send (default = 10)')
+parser.add_argument('--dir', metavar='DIRECTORY', default='', help='Directory, in which .cap file is stored (default = mydirectory/wifis/NETWORK_NAME/)')
+parser.add_argument('--nokill', default=False, action='store_true', help='Specify if you dont want to kill processes. May not work depending upon your software/firmware')
 
 args = parser.parse_args()
 # Parsed values ------------------- End
@@ -28,14 +28,12 @@ BSSID = type(str)
 Channel = type(int)
 SignalStrength = type(int)
 
-Confidence = float(args.conf)  # How confident script must be in guessing network name
+Confidence = args.conf  # How confident script must be in guessing network name
 
 CurrentStation = ''
 UsedStations = []
 Stations = []
-DeauthPacketsAmount = type(int)
-if args.pAm != '':
-	DeauthPacketsAmount = args.pAm
+DeauthPacketsAmount = args.pack
 CyclesAmount = 1	# If all stations found fail to deauth,
 					# script will repeat deauth for all stations times CyclesAmount
 					# (1 == Repeat 1 times, 0 = dont repeat, rescan)
@@ -45,9 +43,7 @@ SaveTo = "{}/wifis/".format(MY_DIRECTORY[:-1])
 if args.dir != '':
 	SaveTo = args.dir
 
-isPi = False
-if args.mode == 'pi':
-	isPi = True
+KillProcesses = not args.nokill
 # Global variables ------------------------- End
 
 
@@ -114,15 +110,13 @@ def monitor_mode():
 
 
 def start_network_manager():
-	command_network_manager_start = 'sudo systemctl start NetworkManager'
-	command_dhcpcd_start = 'sudo systemctl start dhcpcd 2>&1'
-	if os.popen(command_dhcpcd_start).read() == "Unit dhcpcd.service could not be found.\n":
-		os.popen(command_network_manager_start).read()
+	if "Unit dhcpcd.service" in os.popen("sudo systemctl start dhcpcd 2>&1").read():
+		os.popen("sudo systemctl start NetworkManager").read()
 
 
 def start_airmon():
 	global Interface
-	if not isPi:
+	if KillProcesses:
 		output_airmon_check_kill = os.popen("sudo airmon-ng check kill").read()
 	interface_phy = get_phy_by_name(Interface)
 	output_airmon_start = os.popen("sudo airmon-ng start {}".format(Interface)).read()
@@ -194,7 +188,7 @@ def fill_stations():
 		for idx, val in enumerate(csvfile):
 			if idx + 1 > 5:
 				v = val.split(',')[0]
-				if v != "\n" || v != "\r\n":
+				if v != "\n" and v != "\r\n":
 					Stations.append(val.split(',')[0])
 
 
@@ -252,10 +246,10 @@ def check_handshake():
 	if command_aircrack_output == "Invalid packet capture length 0 - corrupted file?\n":
 		return False
 	try:
-		command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()'".format(SaveTo)
+		command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'".format(SaveTo)
 		command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
 	except IndexError:
-		command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '6p' | tr -s ' ' | tr -d '()'".format(SaveTo)
+		command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '6p' | tr -s ' ' | tr -d '()\n'".format(SaveTo)
 		command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
 	if command_aircrack_output > 0:
 		return True
@@ -285,7 +279,7 @@ if __name__ == "__main__":
 	print('[' + colored(str(dt.now().time()).split('.')[0], 'blue') + '] [' + colored('INFO', 'green') + '] Interface: {}'.format(Interface))
 	if monitor_mode():
 		stop_airmon()
-		if not isPi:
+		if KillProcesses:
 			start_network_manager()
 			time.sleep(5)
 	get_network_info()
@@ -316,6 +310,6 @@ if __name__ == "__main__":
 			cyclesCount = 1
 	print('[' + colored(str(dt.now().time()).split('.')[0], 'blue', attrs=['bold']) + '] [' + colored('INFO', 'green', attrs=['bold']) + '] ' + colored('Success!', attrs=['bold']))
 	stop_airmon()
-	if not isPi:
+	if KillProcesses:
 		start_network_manager()
 # MAIN ---------------------------------- END
