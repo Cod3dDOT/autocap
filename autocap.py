@@ -1,10 +1,10 @@
-import argparse                         # parse flags
-import os                               # check for directories, open processes
-import subprocess                       # open processes
-import time                             # sleep
-from datetime import datetime as dt     # output time
-from difflib import get_close_matches   # for network guesses
-from termcolor import colored           # some colors for ya
+import argparse							# parse flags
+import os								# check for directories, open processes
+import subprocess						# open processes
+import time								# sleep
+from datetime import datetime as dt		# output time
+from difflib import get_close_matches	# for network guesses
+from termcolor import colored			# some colors for ya
 
 # Parsing values ------------------ Start
 parser = argparse.ArgumentParser(description="Automatically capture handshake")
@@ -22,7 +22,7 @@ args = parser.parse_args()
 # Parsed variables ------------------------- Start
 Interface = args.i
 SSID = args.ssid
-Confidence = args.conf  # How confident script must be in guessing network name
+Confidence = args.conf	# How confident script must be in guessing network name
 DeauthPacketsAmount = args.pack
 
 MY_DIRECTORY = os.popen("pwd").read()
@@ -208,26 +208,16 @@ def make_directory(directory, network_name):
 
 
 def check_handshake(directory):
-	command_aircrack_output = type(int)
-	command_aircrack_output = ''
-	try:
-		command_aircrack = "sudo aircrack-ng {}-01.cap 2>&1 | sed -n '3p' | tr -s ' '".format(directory)
-		command_aircrack_output = os.popen(command_aircrack).read()
-	except IndexError:
-		command_aircrack = "sudo aircrack-ng {}-01.cap 2>&1 | sed -n '4p' | tr -s ' '".format(directory)
-		command_aircrack_output = os.popen(command_aircrack).read()
-	if command_aircrack_output == "Invalid packet capture length 0 - corrupted file?\n":
+	command_test_corupted = "aircrack-ng {}01.cap 2>&1 | egrep 'corrupted file' | tr -d '('".format(directory)
+	command_get_handshakes = "aircrack-ng {}01.cap 2>&1 | egrep handshake".format(directory) + " | awk '{print $5;}' | tr -d '(\n'"
+	
+	if(os.popen(command_test_corupted).read() != ""):
 		return False, "Corrupted file"
-	try:
-		command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '7p' | tr -s ' ' | tr -d '()\n'".format(directory)
-		command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
-	except IndexError:
-		command_aircrack = "sudo aircrack-ng {}-01.cap | sed -n '6p' | tr -s ' ' | tr -d '()\n'".format(directory)
-		command_aircrack_output = int(os.popen(command_aircrack).read().split(" ")[5])
-	if command_aircrack_output > 0:
-		return True, "Success"
-	else:
+	
+	if(os.popen(command_get_handshakes).read() == "0"):
 		return False, "No handshake"
+	
+	return True, "Success"
 
 
 def check_for_stations(directory):
